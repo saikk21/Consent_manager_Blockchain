@@ -1,0 +1,151 @@
+# E.1a.4 — Gated npm publish for @sammati/* (secrets only in npm_publish job).
+# Triggers: tag sdk-v* or manual workflow_dispatch. Never runs on ordinary branch pushes.
+name: SDK publish
+
+on:
+  push:
+    tags:
+      - "sdk-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (e.g. sdk-v0.2.0)"
+        required: true
+        type: string
+      dry_run_only:
+        description: "If true, run verify + prepublish only (no registry upload)"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-publish-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify (same gates as SDK verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ci:verify-sdk
+        run: npm run ci:verify-sdk
+
+  prepublish:
+    name: Prepare registry manifests + dry-run publish
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package versions
+        run: npx tsx scripts/sdk-release/run-verify-release-tag-versions.ts
+
+      - name: Prepare package.json for registry (semver deps, drop private)
+        run: npx tsx scripts/sdk-release/run-prepare-registry-manifests.ts
+
+      - name: Reconcile install after manifest rewrite
+        run: npm install --no-audit --no-fund
+
+      - name: Build SDK packages
+        run: npm run build:packages
+
+      - name: Pack tarballs
+        run: npx tsx scripts/sdk-release/cli.ts pack
+
+      - name: Verify tarball integrity
+        run: npx tsx scripts/sdk-release/cli.ts verify
+
+      - name: npm publish --dry-run (sequential)
+        run: npx tsx scripts/sdk-release/publish-registry-sequential.ts
+        env:
+          DRY_RUN: "1"
+
+  npm_publish:
+    name: Publish to npm + registry smoke
+    needs: prepublish
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run_only == false) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: npm
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package versions
+        run: npx tsx scripts/sdk-release/run-verify-release-tag-versions.ts
+
+      - name: Prepare package.json for registry (semver deps, drop private)
+        run: npx tsx scripts/sdk-release/run-prepare-registry-manifests.ts
+
+      - name: Reconcile install after manifest rewrite
+        run: npm install --no-audit --no-fund
+
+      - name: Build SDK packages
+        run: npm run build:packages
+
+      - name: Configure npm authentication
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish packages (sequential)
+        run: npx tsx scripts/sdk-release/publish-registry-sequential.ts
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Resolve SDK version for smoke
+        id: sdkversion
+        run: |
+          v=$(node -p "JSON.parse(require('fs').readFileSync('packages/shared-core/package.json','utf8')).version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Post-publish install + ESM/CJS smoke (registry)
+        run: npx tsx scripts/sdk-release/post-publish-registry-smoke.ts
+        env:
+          SAMMATI_SDK_VERSION: ${{ steps.sdkversion.outputs.version }}

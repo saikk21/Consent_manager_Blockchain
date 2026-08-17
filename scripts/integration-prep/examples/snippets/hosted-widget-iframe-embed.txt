@@ -1,0 +1,47 @@
+Hosted widget — recommended iframe embed (company parent page)
+================================================================
+
+Replace BASE and SESSION_TOKEN from your backend after POST /v1/widget/sessions.
+
+1) Minimal (no sandbox) — best for first integration test
+------------------------------------------------------------
+<iframe
+  title="Consent"
+  src="BASE/widget/hosted?session_token=SESSION_TOKEN"
+  style="width:100%;min-height:420px;border:0"
+></iframe>
+
+Example BASE:
+  http://127.0.0.1:3000
+  or https://your-ledger-host.example
+
+2) Sandboxed (stricter) — REQUIRED tokens
+-------------------------------------------
+Without allow-same-origin, the iframe document gets an opaque origin and
+browser may block reading API responses (Helmet CORP / fetch). Always include:
+
+  sandbox="allow-scripts allow-same-origin"
+
+Example:
+
+<iframe
+  title="Consent"
+  sandbox="allow-scripts allow-same-origin"
+  src="BASE/widget/hosted?session_token=SESSION_TOKEN"
+  style="width:100%;min-height:420px;border:0"
+></iframe>
+
+Optional extras if you add popups or forms later: allow-popups, allow-forms.
+
+3) Session create must match parent origin
+------------------------------------------
+allowed_origin on POST /v1/widget/sessions must equal the parent page origin
+exactly (e.g. http://localhost:5173 vs http://127.0.0.1:5173 are different).
+
+4) Debugging blank / broken iframe
+-----------------------------------
+- Parent DevTools Console: CSP / frame-ancestors violations.
+- Select the iframe in DevTools context dropdown → Console + Network:
+  expect POST BASE/v1/widget/runtime/bootstrap → 200.
+- If sandbox="allow-scripts" ONLY (no allow-same-origin), try adding
+  allow-same-origin or remove sandbox temporarily to confirm.

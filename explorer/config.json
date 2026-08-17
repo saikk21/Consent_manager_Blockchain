@@ -1,0 +1,9 @@
+{
+  "network-configs": {
+    "sammati-network": {
+      "name": "sammati-network",
+      "profile": "/opt/explorer/connection-profile/sammati-network.json"
+    }
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,10 @@
+{
+  "external_user_id": "sample-subscriber-demo-001",
+  "purpose_code": "SAMPLE_NEWSLETTER_SUBSCRIPTION",
+  "policy_ref": "sample-newsletter-subscription",
+  "policy_version": 1,
+  "locale": "en-IN",
+  "allowed_origin": "http://localhost:5173",
+  "environment": "dev",
+  "ttl_seconds": 600
+}

@@ -1,0 +1,32 @@
+Widget session — manual curl (no iframe)
+=========================================
+
+Prereqs
+-------
+- npm run dev running
+- Policy sample-newsletter-subscription v1 PUBLISHED (en-IN)
+- CMD from project root:
+    cd /d "C:\Users\hp\Desktop\Sammati Project\Project Sammati"
+    set API_KEY=<your rawApiKey>
+
+allowed_origin in JSON must match the parent page origin when you add iframe later.
+Edit scripts\integration-prep\examples\payloads\sample-widget-session-create.json if needed.
+
+1) Create session (201)
+-----------------------
+  curl -s -X POST "http://127.0.0.1:3000/v1/widget/sessions" ^
+    -H "Authorization: Bearer %API_KEY%" ^
+    -H "Content-Type: application/json; charset=utf-8" ^
+    -H "Idempotency-Key: sample-newsletter-widget-session-001" ^
+    -d @scripts\integration-prep\examples\payloads\sample-widget-session-create.json
+
+Expect: sessionId (UUID), expiresAt (ISO), render.renderHash, render.uiSchemaVersion, token.sessionToken (JWT)
+
+2) GET session (200)
+--------------------
+  curl -s -H "Authorization: Bearer %API_KEY%" ^
+    "http://127.0.0.1:3000/v1/widget/sessions/<SESSION_ID>"
+
+Replace <SESSION_ID> with sessionId from step 1.
+
+Expect: sessionId, status "ISSUED" (or "STARTED" if something touched it), expiresAt, consent null until submit

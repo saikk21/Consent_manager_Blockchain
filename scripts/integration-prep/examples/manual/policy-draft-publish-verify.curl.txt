@@ -1,0 +1,47 @@
+Sample policy — draft + publish + verify (manual curl)
+=======================================================
+
+Prereqs
+-------
+- API running: npm run dev (project root)
+- CMD: set API_KEY=<your rawApiKey>
+- Run all curl commands from PROJECT ROOT:
+    cd /d "C:\Users\hp\Desktop\Sammati Project\Project Sammati"
+
+Validate JSON locally (optional)
+--------------------------------
+  npm run verify:sample-policy-json
+
+Expected: "OK — sample-newsletter-subscription v1 locale en-IN ..."
+
+1) Create draft (201)
+---------------------
+  curl -s -X POST "http://127.0.0.1:3000/v1/policies" ^
+    -H "Authorization: Bearer %API_KEY%" ^
+    -H "Content-Type: application/json; charset=utf-8" ^
+    -H "Idempotency-Key: sample-newsletter-draft-v1" ^
+    -d @scripts\integration-prep\examples\payloads\sample-newsletter-policy-v1-draft.json
+
+Expected JSON includes: "state":"DRAFT", "policyRef":"sample-newsletter-subscription", "version":1
+
+2) Publish (200)
+----------------
+  curl -s -X POST "http://127.0.0.1:3000/v1/policies/sample-newsletter-subscription/versions/1/publish" ^
+    -H "Authorization: Bearer %API_KEY%" ^
+    -H "Content-Type: application/json; charset=utf-8" ^
+    -H "Idempotency-Key: sample-newsletter-publish-v1" ^
+    -d "{}"
+
+Expected JSON includes: "state":"PUBLISHED", "publishedAt":"..."
+
+3) Verify GET (200)
+--------------------
+  curl -s -H "Authorization: Bearer %API_KEY%" ^
+    "http://127.0.0.1:3000/v1/policies/sample-newsletter-subscription/versions/1"
+
+Expected JSON includes: "state":"PUBLISHED"
+
+If draft already exists
+-----------------------
+- Publish may still work if draft exists but not published.
+- If POST /v1/policies returns conflict / duplicate version, skip step 1 and use steps 2–3 only.

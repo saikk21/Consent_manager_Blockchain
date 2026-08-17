@@ -1,0 +1,80 @@
+{
+  "name": "sammati-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sammati consent ledger service (monorepo root; not published as an npm SDK).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1423pratik/verifiable-consent-ledger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1423pratik/verifiable-consent-ledger/issues"
+  },
+  "homepage": "https://github.com/1423pratik/verifiable-consent-ledger#readme",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "build:packages": "npm run --workspace @sammati/shared-core build && npm run --workspace @sammati/webhook-utils build && npm run --workspace @sammati/server-sdk build && npm run --workspace @sammati/widget-sdk build",
+    "typecheck:packages": "npm run --workspace @sammati/shared-core build && npm run typecheck --workspace @sammati/shared-core && npm run typecheck --workspace @sammati/webhook-utils && npm run typecheck --workspace @sammati/server-sdk && npm run typecheck --workspace @sammati/widget-sdk",
+    "test:packages": "npm run -ws --if-present test",
+    "check:workspace-deps": "tsx scripts/sdk-release/run-check-workspace-deps.ts",
+    "ci:verify-sdk": "npm run check:workspace-deps && npm run typecheck:packages && npm run release:dry-run && npx tsx scripts/sdk-release/cli.ts smoke --skip-pack",
+    "release:verify-tag": "tsx scripts/sdk-release/run-verify-release-tag-versions.ts",
+    "release:prepare-registry": "tsx scripts/sdk-release/run-prepare-registry-manifests.ts",
+    "validate:d1a": "npm run build && npm run build:packages && npm run test:packages",
+    "release:pack": "npm run build:packages && tsx scripts/sdk-release/cli.ts pack",
+    "release:verify-packs": "tsx scripts/sdk-release/cli.ts verify",
+    "release:smoke-install": "npm run build:packages && tsx scripts/sdk-release/cli.ts smoke",
+    "release:dry-run": "npm run build:packages && npm run test:packages && tsx scripts/sdk-release/cli.ts pack && tsx scripts/sdk-release/cli.ts verify",
+    "release:dry-run:full": "npm run release:dry-run && tsx scripts/sdk-release/cli.ts smoke --skip-pack",
+    "start": "node dist/server.js",
+    "migrate:up": "node --env-file=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate up -m src/persistence/migrations --ts-node false",
+    "migrate:down": "node --env-file=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate down -m src/persistence/migrations --ts-node false",
+    "migrate:create": "node --env-file=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate create -m src/persistence/migrations --ts-node false",
+    "apikey:create": "tsx src/scripts/createApiKey.ts",
+    "company:bootstrap": "tsx src/scripts/bootstrapCompany.ts",
+    "test:lifecycle": "tsx src/scripts/sampleLifecycleTest.ts",
+    "worker:proof": "tsx src/scripts/workerProof.ts",
+    "worker:anchor-mock": "tsx src/scripts/workerAnchorMock.ts",
+    "worker:webhook": "tsx src/scripts/workerWebhook.ts",
+    "test:proof-verification": "tsx src/tests/proofVerification.test.ts",
+    "test:policy-artifacts": "tsx src/tests/policyArtifacts.test.ts",
+    "test:widget-token": "tsx src/tests/widgetSessionToken.test.ts",
+    "test:widget-sessions": "tsx src/tests/widgetSessions.test.ts",
+    "test:webhooks": "tsx src/tests/webhooks.test.ts",
+    "test:widget-runtime": "tsx src/tests/widgetRuntime.test.ts",
+    "test:hosted-widget-html": "tsx src/tests/hostedWidgetHtml.test.ts",
+    "test:widget-route-errors": "tsx src/tests/widgetRouteErrors.test.ts",
+    "test:widget-section-order": "tsx src/tests/widgetSectionOrder.test.ts",
+    "verify:sample-policy-json": "tsx scripts/integration-prep/helpers/validate-sample-policy-draft.ts",
+    "verify:freeze-local": "npm run build && npm run test:widget-token && npm run test:hosted-widget-html && npm run test:widget-route-errors && npm run test:widget-section-order && npm run verify:sample-policy-json",
+    "worker:anchor-fabric": "tsx src/scripts/workerAnchorFabric.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^12.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/sensible": "^6.0.0",
+    "@grpc/grpc-js": "^1.14.3",
+    "@hyperledger/fabric-gateway": "^1.11.0",
+    "@sammati/shared-core": "file:packages/shared-core",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.0.0",
+    "pg": "^8.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.0.0",
+    "jsdom": "^29.1.1",
+    "node-pg-migrate": "^7.0.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.5"
+  }
+}

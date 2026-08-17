@@ -1,0 +1,48 @@
+Republish sample policy under a different company API key
+==========================================================
+
+Use this when GET /v1/policies/sample-newsletter-subscription/versions/1 returns 404
+with a new API key (policy existed under a different company before).
+
+Prereqs
+-------
+- Sammati: npm run dev
+- CMD: use the raw API key for the company where you need the policy
+
+  cd /d "C:\Users\hp\Desktop\Sammati Project\Project Sammati"
+  set API_KEY=paste_that_company_raw_key_here
+
+1) Create draft v1 (201)
+------------------------
+Uses existing JSON (policy_ref + version 1 inside file).
+
+  curl -s -X POST "http://127.0.0.1:3000/v1/policies" ^
+    -H "Authorization: Bearer %API_KEY%" ^
+    -H "Content-Type: application/json; charset=utf-8" ^
+    -H "Idempotency-Key: sample-newsletter-alt-key-draft-v1" ^
+    -d @scripts\integration-prep\examples\payloads\sample-newsletter-policy-v1-draft.json
+
+If you get an error that version already exists FOR THIS COMPANY, use v2:
+  - Copy sample-newsletter-policy-v1-draft.json to a temp file, change "version": 2
+  - Publish URL: .../versions/2/publish
+  - GET: .../versions/2
+
+2) Publish (200)
+----------------
+  curl -s -X POST "http://127.0.0.1:3000/v1/policies/sample-newsletter-subscription/versions/1/publish" ^
+    -H "Authorization: Bearer %API_KEY%" ^
+    -H "Content-Type: application/json; charset=utf-8" ^
+    -H "Idempotency-Key: sample-newsletter-alt-key-publish-v1" ^
+    -d "{}"
+
+(Use /versions/2/ if you created draft v2.)
+
+3) Verify with SAME key (200, PUBLISHED)
+----------------------------------------
+  curl -s -H "Authorization: Bearer %API_KEY%" ^
+    "http://127.0.0.1:3000/v1/policies/sample-newsletter-subscription/versions/1"
+
+4) Align widget session payload
+---------------------------------
+If you published v2, the session body must send policy_version: 2.
+locale stays en-IN; policy_ref stays sample-newsletter-subscription.

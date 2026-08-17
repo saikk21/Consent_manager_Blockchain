@@ -1,0 +1,43 @@
+# Sammati — local API + PostgreSQL for development.
+# Step-by-step: docs/quickstart.md (section "Docker (optional)")
+# After `docker compose up`, API is on http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: sammati-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sammati_ledger
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sammati_ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: sammati-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # In-cluster URL (hostname `postgres` is the DB service name).
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/sammati_ledger
+      PORT: 3000
+      API_KEY_HASH_PEPPER: ""
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    # Migrations then dev server. Proof workers are not started here — run locally if needed: docs/quickstart.md
+    command: sh -c "npm run migrate:up && npm run dev"
+
+volumes:
+  pgdata:

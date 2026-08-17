@@ -1,0 +1,20 @@
+{
+  "policyRef": "sample-newsletter-subscription",
+  "version": 1,
+  "defaultLocale": "en-IN",
+  "requiredLegalVersion": "2026-01",
+  "uiSchemaVersion": 1,
+  "locales": {
+    "en-IN": {
+      "title": "Sample newsletter subscription",
+      "sections": [
+        { "id": "purpose", "text": "We send the newsletter and occasional product updates." },
+        { "id": "data_categories", "text": "Email address and subscription preferences." },
+        { "id": "processing", "text": "We use your data to deliver the newsletter." },
+        { "id": "retention", "text": "We keep data until you unsubscribe." },
+        { "id": "withdrawal", "text": "You may withdraw consent at any time." },
+        { "id": "grievance", "text": "Contact us for privacy questions." }
+      ]
+    }
+  }
+}
